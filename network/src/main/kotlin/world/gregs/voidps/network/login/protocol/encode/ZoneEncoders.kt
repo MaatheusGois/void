@@ -5,6 +5,7 @@ import world.gregs.voidps.network.login.Protocol
 import world.gregs.voidps.network.login.Protocol.CLEAR_ZONE
 import world.gregs.voidps.network.login.protocol.writeByteAdd
 import world.gregs.voidps.network.login.protocol.writeByteInverse
+import world.gregs.voidps.network.login.protocol.writeByteSubtract
 
 /**
  * @param xOffset The zone x coordinate relative to viewport
@@ -14,11 +15,11 @@ import world.gregs.voidps.network.login.protocol.writeByteInverse
 fun Client.clearZone(
     xOffset: Int,
     yOffset: Int,
-    level: Int,
+    level: Int
 ) = send(CLEAR_ZONE) {
-    writeByteAdd(level)
-    writeByteInverse(yOffset)
-    writeByteInverse(xOffset)
+    writeByte(xOffset.toByte())
+    writeByteSubtract(yOffset)
+    writeByte(level.toByte())
 }
 
 /**
@@ -29,9 +30,9 @@ fun Client.clearZone(
 fun Client.updateZone(
     xOffset: Int,
     yOffset: Int,
-    level: Int,
+    level: Int
 ) = send(Protocol.UPDATE_ZONE) {
-    writeByteInverse(yOffset)
-    writeByteAdd(level)
     writeByteAdd(xOffset)
+    writeByte(yOffset.toByte())
+    writeByteSubtract(level)
 }

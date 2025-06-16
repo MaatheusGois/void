@@ -46,6 +46,8 @@ object Main {
 
         // File server
         val cache = timed("cache") { Cache.load(settings) }
+        // Force version table generation for JS5 (RSA-signed ukeys).
+        cache.versionTable
         server = GameServer.load(cache, settings)
         val job = server.start(Settings["network.port"].toInt())
         AuditLog.info("login online")

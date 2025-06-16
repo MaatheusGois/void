@@ -18,6 +18,7 @@ import world.gregs.voidps.network.login.protocol.writeShort
  * @param curve value between -63..63
  * @param startOffset offset from start coordinate, 64 = 1 tile
  */
+// TODO
 fun Client.addProjectileHalfTile(
     offset: Int,
     id: Int,

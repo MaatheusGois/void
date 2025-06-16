@@ -10,15 +10,15 @@ class NPCHitsEncoder : VisualEncoder<NPCVisuals>(NPC_HITS_MASK) {
     override fun encode(writer: Writer, visuals: NPCVisuals, index: Int) {
         val (damage, player, other) = visuals.hits
         writer.apply {
-            writeByteSubtract(damage.count { it != null })
-            for (hit in damage) {
-                if (hit == null) {
-                    break
-                }
+            writeByteInverse(damage.size)
+            damage.forEach { hit ->
                 hit.write(writer, index, player, add = false)
             }
         }
     }
 
-    override fun encode(writer: Writer, visuals: NPCVisuals): Unit = throw RuntimeException("Shouldn't be reachable")
+    override fun encode(writer: Writer, visuals: NPCVisuals) {
+        throw RuntimeException("Shouldn't be reachable")
+    }
+
 }

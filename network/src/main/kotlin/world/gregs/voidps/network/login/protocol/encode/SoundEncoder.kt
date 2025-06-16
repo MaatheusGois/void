@@ -13,8 +13,8 @@ fun Client.playMusicTrack(
     volume: Int = 255,
 ) = send(PLAY_MUSIC) {
     writeByteSubtract(delay)
-    writeByteSubtract(volume)
     writeShortAddLittle(music)
+    writeByteInverse(volume)
 }
 
 fun Client.playSoundEffect(
@@ -49,7 +49,7 @@ fun Client.playJingle(
     effect: Int,
     volume: Int = 255,
 ) = send(JINGLE) {
-    writeMedium(0)
-    writeShortAddLittle(effect)
+    writeShortAdd(effect)
+    writeMediumV2(0) //TODO Delay
     writeByteInverse(volume)
 }

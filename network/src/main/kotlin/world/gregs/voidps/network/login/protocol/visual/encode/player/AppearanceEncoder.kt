@@ -33,13 +33,13 @@ class AppearanceEncoder : VisualEncoder<PlayerVisuals>(APPEARANCE_MASK, initial 
         ) = visuals.appearance
         writer.apply {
             val length = size(visuals.appearance)
-            writeByte(length)
+            writeByteSubtract(length)
             if (transform != -1) {
                 writeByte(soundDistance)
-                writeShortLittle(runSound)
-                writeShortLittle(walkSound)
-                writeShortLittle(crawlSound)
-                writeShortLittle(idleSound)
+                writeShort(runSound)
+                writeShort(walkSound)
+                writeShort(crawlSound)
+                writeShort(idleSound)
             }
             writeByte(transform != -1)
 
@@ -51,7 +51,7 @@ class AppearanceEncoder : VisualEncoder<PlayerVisuals>(APPEARANCE_MASK, initial 
             }
             writeByte(combatLevel)
             writeStringLittle(displayName)
-            writeShortLittle(emote)
+            writeShort(emote)
             for (i in 4 downTo 0) {
                 writeByte(body.getColour(i))
             }
@@ -65,7 +65,7 @@ class AppearanceEncoder : VisualEncoder<PlayerVisuals>(APPEARANCE_MASK, initial 
                     if (part == 0) {
                         writeByte(0)
                     } else {
-                        writeShortLittle(part)
+                        writeShort(part)
                     }
                 }
             }
