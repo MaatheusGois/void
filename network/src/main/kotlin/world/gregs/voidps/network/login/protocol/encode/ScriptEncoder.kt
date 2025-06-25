@@ -1,12 +1,10 @@
 package world.gregs.voidps.network.login.protocol.encode
 
-import io.ktor.utils.io.writeInt
 import world.gregs.voidps.network.client.Client
 import world.gregs.voidps.network.client.Client.Companion.SHORT
 import world.gregs.voidps.network.client.Client.Companion.string
 import world.gregs.voidps.network.login.Protocol.SCRIPT
-import world.gregs.voidps.network.login.protocol.writeByte
-import world.gregs.voidps.network.login.protocol.writeText
+import world.gregs.voidps.network.login.protocol.writeString
 
 /**
  * Sends a client script to run
@@ -15,33 +13,29 @@ import world.gregs.voidps.network.login.protocol.writeText
  */
 fun Client.sendScript(
     id: Int,
-    params: List<Any?>,
-) = send(SCRIPT, getLength(params), SHORT) {
-    val types = StringBuilder()
-    for (param in params) {
-        types.append(if (param == null || param is String) "s" else "i")
-    }
-    writeText(types.toString())
-    for (param in params.reversed()) {
-        when (param) {
-            null -> writeByte(0)
-            is String -> writeText(param)
-            is Int -> writeInt(param)
+    params: List<Any?>
+) {
+    return
+    send(SCRIPT, getLength(params), SHORT) {
+        val types = StringBuilder()
+        for (param in params) {
+            types.append(if (param == null || param is String) "s" else "i")
         }
+        writeString(types.toString())
+        for (param in params.reversed()) {
+            when (param) {
+                null -> writeByte(0)
+                is String -> writeString(param)
+                is Int -> writeInt(param)
+            }
+        }
+        writeInt(id)
     }
-    writeInt(id)
 }
 
 private fun getLength(params: List<Any?>): Int {
     var count = 4
     count += params.size + 1
-    count += params.sumOf {
-        when (it) {
-            null -> 1
-            is String -> string(it)
-            is Int -> 4
-            else -> 0
-        }
-    }
+    count += params.sumOf { if (it == null) 1 else if (it is String) string(it) else if (it is Int) 4 else 0 }
     return count
 }

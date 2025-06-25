@@ -34,12 +34,14 @@ fun Client.message(text: String, type: Int, tile: Int = 0, name: String? = null,
         writeInt(tile)
         writeByte(mask)
         if (name != null) {
-            writeText(name)
+            println(name)
+            writeString(name)
             if (mask and 0x2 == 0x2) {
-                writeText(formatted)
+                println(formatted)
+                writeString(formatted)
             }
         }
-        writeText(message)
+        writeString(message)
     }
 }
 
@@ -94,7 +96,7 @@ fun Client.privateChatFrom(displayName: String, rights: Int, data: ByteArray, re
 }
 
 fun Client.privateQuickChatFrom(displayName: String, rights: Int, file: Int, data: ByteArray, responseName: String = displayName) {
-    send(PRIVATE_QUICK_CHAT_FROM, name(displayName, responseName) + 8 + data.size, BYTE) {
+    send(PRIVATE_QUICK_CHAT_FROM, name(displayName, responseName) + 9 + data.size, BYTE) {
         writeName(displayName, responseName)
         writeRandom()
         writeByte(rights)
@@ -105,14 +107,14 @@ fun Client.privateQuickChatFrom(displayName: String, rights: Int, file: Int, dat
 
 fun Client.privateChatTo(displayName: String, data: ByteArray) {
     send(PRIVATE_CHAT_TO, string(displayName) + data.size, BYTE) {
-        writeText(displayName)
+        writeString(displayName)
         writeBytes(data)
     }
 }
 
 fun Client.privateQuickChatTo(displayName: String, file: Int, data: ByteArray) {
     send(PRIVATE_QUICK_CHAT_TO, string(displayName) + 2 + data.size, BYTE) {
-        writeText(displayName)
+        writeString(displayName)
         writeShort(file)
         writeBytes(data)
     }

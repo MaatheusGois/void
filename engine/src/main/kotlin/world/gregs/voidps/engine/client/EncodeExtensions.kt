@@ -1,15 +1,14 @@
 package world.gregs.voidps.engine.client
 
+import net.pearx.kasechange.toSnakeCase
 import world.gregs.voidps.engine.client.ui.chat.Colours
 import world.gregs.voidps.engine.data.definition.ClientScriptDefinitions
 import world.gregs.voidps.engine.data.definition.FontDefinitions
 import world.gregs.voidps.engine.entity.character.Character
-import world.gregs.voidps.engine.entity.character.npc.NPC
 import world.gregs.voidps.engine.entity.character.player.Player
 import world.gregs.voidps.engine.entity.character.player.chat.ChatType
 import world.gregs.voidps.engine.get
 import world.gregs.voidps.network.login.protocol.encode.*
-import world.gregs.voidps.type.Direction
 import world.gregs.voidps.type.Tile
 import java.util.*
 
@@ -28,15 +27,15 @@ fun Character.message(
     text: String,
     type: ChatType = ChatType.Game,
     tile: Int = 0,
-    name: String? = null,
+    name: String? = null
 ) {
     if (this !is Player) {
         return
     }
     getOrPut("messages") { FixedSizeQueue<String>(100) }.add(text)
     val font = get<FontDefinitions>().get("p12_full")
-    for (line in font.splitLines(Colours.replaceCustomTags(text), if (type == ChatType.Console) 600 else 484)) {
-        client?.message(line, type.id, tile, name, name?.lowercase(Locale.getDefault()))
+    for (line in font.splitLines(Colours.replaceCustomTags(text), 484)) {
+        client?.message(line, type.id, tile, name, name?.lowercase()?.replace(" ", "_"))
     }
 }
 
@@ -60,7 +59,7 @@ fun Player.sendInventoryItems(
     inventory: Int,
     size: Int,
     items: IntArray,
-    primary: Boolean,
+    primary: Boolean
 ) = client?.sendInventoryItems(inventory, size, items, primary) ?: Unit
 
 /**
@@ -72,7 +71,7 @@ fun Player.sendInventoryItems(
 fun Player.sendInterfaceItemUpdate(
     key: Int,
     updates: List<Triple<Int, Int, Int>>,
-    secondary: Boolean,
+    secondary: Boolean
 ) = client?.sendInterfaceItemUpdate(key, updates, secondary) ?: Unit
 
 /**
@@ -86,12 +85,12 @@ fun Player.sendInterfaceSettings(
     interfaceComponent: Int,
     fromSlot: Int,
     toSlot: Int,
-    settings: Int,
+    settings: Int
 ) = client?.sendInterfaceSettings(
     interfaceComponent,
     fromSlot,
     toSlot,
-    settings,
+    settings
 ) ?: Unit
 
 /**
@@ -101,7 +100,7 @@ fun Player.sendInterfaceSettings(
  */
 fun Player.sendInterfaceScroll(
     interfaceComponent: Int,
-    settings: Int,
+    settings: Int
 ) = client?.sendInterfaceScroll(interfaceComponent, settings) ?: Unit
 
 /**
@@ -117,7 +116,7 @@ fun Player.sendRunEnergy(energy: Int) = client?.sendRunEnergy(energy) ?: Unit
  */
 fun Player.sendScript(
     id: String,
-    vararg params: Any?,
+    vararg params: Any?
 ) {
     val definition = get<ClientScriptDefinitions>().get(id)
     sendScript(definition.id, params.toList())
@@ -125,76 +124,73 @@ fun Player.sendScript(
 
 fun Player.sendScript(
     id: Int,
-    params: List<Any?>,
+    params: List<Any?>
 ) = client?.sendScript(id, params) ?: Unit
 
 fun Player.playMusicTrack(
     music: Int,
     delay: Int = 100,
-    volume: Int = 255,
+    volume: Int = 255
 ) = client?.playMusicTrack(music, delay, volume) ?: Unit
 
 fun Player.privateStatus(
-    private: String,
+    private: String
 ) {
-    client?.sendPrivateStatus(
-        when (private) {
-            "friends" -> 1
-            "off" -> 2
-            else -> 0
-        },
-    )
+    client?.sendPrivateStatus(when (private) {
+        "friends" -> 1
+        "off" -> 2
+        else -> 0
+    })
 }
 
 fun Player.publicStatus(
     public: String,
-    trade: String,
+    trade: String
 ) {
-    client?.sendPublicStatus(
-        when (public) {
-            "friends" -> 1
-            "off" -> 2
-            "hide" -> 3
-            else -> 0
-        },
-        when (trade) {
-            "friends" -> 1
-            "off" -> 2
-            else -> 0
-        },
-    )
+    client?.sendPublicStatus(when (public) {
+        "friends" -> 1
+        "off" -> 2
+        "hide" -> 3
+        else -> 0
+    }, when (trade) {
+        "friends" -> 1
+        "off" -> 2
+        else -> 0
+    })
 }
+
+fun Player.updateFriend(friend: Friend) = client?.sendFriendsList(listOf(friend)) ?: Unit
 
 fun Player.moveCamera(
     tile: Tile,
     height: Int,
-    speed: Int = 232,
-    acceleration: Int = 232,
+    constantSpeed: Int = 232,
+    variableSpeed: Int = 232,
 ) {
     val viewport = viewport ?: return
     val result = viewport.lastLoadZone.safeMinus(viewport.zoneRadius, viewport.zoneRadius)
     val local = tile.minus(result.tile)
-    return client?.moveCamera(local.x, local.y, height, speed, acceleration) ?: Unit
+    return client?.moveCamera(local.x, local.y, height, constantSpeed, variableSpeed) ?: Unit
 }
 
 fun Player.turnCamera(
     tile: Tile,
     height: Int,
-    speed: Int = 232,
-    acceleration: Int = 232,
+    constantSpeed: Int = 232,
+    variableSpeed: Int = 232,
 ) {
     val viewport = viewport ?: return
     val result = viewport.lastLoadZone.safeMinus(viewport.zoneRadius, viewport.zoneRadius)
     val local = tile.minus(result.tile)
-    return client?.turnCamera(local.x, local.y, height, speed, acceleration) ?: Unit
+    return client?.turnCamera(local.x, local.y, height, constantSpeed, variableSpeed) ?: Unit
 }
 
 fun Player.shakeCamera(
-    intensity: Int = 0,
-    type: Int = 0,
-    cycle: Int = 0,
-    movement: Int = 0,
-    speed: Int = 0,
+    intensity: Int,
+    type: Int,
+    cycle: Int,
+    movement: Int,
+    speed: Int,
 ) = client?.shakeCamera(intensity, type, cycle, movement, speed) ?: Unit
 
 fun Player.clearCamera() = client?.clearCamera() ?: Unit
@@ -210,56 +206,3 @@ fun Player.minimap(vararg states: Minimap) {
 }
 
 fun Player.clearMinimap() = client?.sendMinimapState(0) ?: Unit
-
-/**
- * Add an [arrow] hint to a [tile] with [radius]
- */
-fun Player.hint(tile: Tile, radius: Int = 1, arrow: Int = HintArrow.FILLED, direction: Direction = Direction.NONE, height: Int = 0): Int {
-    val viewport = viewport ?: return -1
-    val index = viewport.hints.firstOrNull { it == 0 } ?: return -1
-    val type = when (direction) {
-        Direction.WEST -> 3
-        Direction.EAST -> 4
-        Direction.SOUTH -> 5
-        Direction.NORTH -> 6
-        else -> 2
-    }
-    viewport.hints[index] = type
-    client?.arrowHint(type, index, sprite = arrow, x = tile.x, y = tile.y, level = tile.level, z = height, radius = radius)
-    return index
-}
-
-/**
- * Add an [arrow] hint over [character]
- */
-fun Player.hint(character: Character, arrow: Int = HintArrow.FILLED): Int {
-    val viewport = viewport ?: return -1
-    val index = viewport.hints.firstOrNull { it == 0 } ?: return -1
-    val type = when (character) {
-        is Player -> 10
-        is NPC -> 1
-        else -> return -1
-    }
-    viewport.hints[index] = type
-    client?.arrowHint(type, index, sprite = arrow, entityIndex = character.index)
-    return index
-}
-
-/**
- * Clear the hint at [index] (or all if -1)
- */
-fun Player.clearHint(index: Int = -1) {
-    val viewport = viewport ?: return
-    if (index == -1) {
-        for (i in viewport.hints.indices) {
-            if (viewport.hints[i] == 0) {
-                continue
-            }
-            client?.arrowHint(0, i)
-            viewport.hints[i] = 0
-        }
-    } else {
-        client?.arrowHint(0, index)
-        viewport.hints[index] = 0
-    }
-}

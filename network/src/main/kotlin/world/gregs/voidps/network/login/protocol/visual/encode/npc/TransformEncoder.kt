@@ -8,6 +8,6 @@ import world.gregs.voidps.network.login.protocol.visual.VisualMask.TRANSFORM_MAS
 class TransformEncoder : VisualEncoder<NPCVisuals>(TRANSFORM_MASK, initial = true) {
 
     override fun encode(writer: Writer, visuals: NPCVisuals) {
-        writer.writeShortLittle(visuals.transform.id)
+        writer.ip2(visuals.transform.id)
     }
 }

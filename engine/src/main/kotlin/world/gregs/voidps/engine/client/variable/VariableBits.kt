@@ -1,12 +1,11 @@
 package world.gregs.voidps.engine.client.variable
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList
-import world.gregs.voidps.engine.entity.Entity
-import world.gregs.voidps.engine.entity.character.player.Player
+import world.gregs.voidps.engine.event.EventDispatcher
 
 class VariableBits(
     private val variables: Variables,
-    private val entity: Entity,
+    private val events: EventDispatcher
 ) {
 
     fun contains(key: String, id: Any): Boolean {
@@ -15,14 +14,12 @@ class VariableBits(
     }
 
     fun set(key: String, value: Any, refresh: Boolean): Boolean {
-        val values: MutableList<Any> = variables.getOrPut(key) { ObjectArrayList() }
+        val values: MutableList<Any> = variables.getOrPut(key) { ObjectArrayList<Any>().apply { add(value) } }
         if (!values.contains(value) && values.add(value)) {
             if (refresh) {
                 variables.send(key)
             }
-            if (entity is Player) {
-                VariableApi.add(entity, key, value)
-            }
+            events.emit(VariableBitAdded(key, value))
             return true
         }
         return false
@@ -34,9 +31,7 @@ class VariableBits(
             if (refresh) {
                 variables.send(key)
             }
-            if (entity is Player) {
-                VariableApi.remove(entity, key, value)
-            }
+            events.emit(VariableBitRemoved(key, value))
             return true
         }
         return false
@@ -48,10 +43,9 @@ class VariableBits(
         if (refresh) {
             variables.send(key)
         }
-        if (entity is Player) {
-            for (value in values) {
-                VariableApi.remove(entity, key, value)
-            }
+        for (value in values) {
+            events.emit(VariableBitRemoved(key, value))
+
         }
     }
 }

@@ -1,18 +1,21 @@
 package world.gregs.voidps.network.login.protocol.decode
 
-import kotlinx.io.Source
-import kotlinx.io.readUByte
+import io.ktor.utils.io.core.*
 import world.gregs.voidps.network.client.Instruction
 import world.gregs.voidps.network.client.instruction.ExecuteCommand
 import world.gregs.voidps.network.login.protocol.Decoder
-import world.gregs.voidps.network.login.protocol.readString
+import world.gregs.voidps.network.login.protocol.readGjstr
 
 class ConsoleCommandDecoder : Decoder(BYTE) {
 
-    override suspend fun decode(packet: Source): Instruction {
-        val automatic = packet.readUByte().toInt() == 1
-        val retainText = packet.readUByte().toInt() == 1
-        val command = packet.readString()
-        return ExecuteCommand(command, automatic, retainText)
+    @OptIn(ExperimentalUnsignedTypes::class)
+    override suspend fun decode(packet: ByteReadPacket): Instruction {
+        val length = packet.readUByte()
+        val a = packet.readUByte()
+        val command = packet.readGjstr()
+        val parts = command.split(" ")
+        val prefix = parts[0]
+        return ExecuteCommand(prefix, command.removePrefix(prefix).trim())
     }
+
 }

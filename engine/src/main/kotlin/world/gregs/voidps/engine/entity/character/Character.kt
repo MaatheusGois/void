@@ -1,18 +1,12 @@
 package world.gregs.voidps.engine.entity.character
 
-import kotlinx.coroutines.suspendCancellableCoroutine
 import org.rsmod.game.pathfinder.collision.CollisionStrategy
-import world.gregs.voidps.engine.GameLoop
-import world.gregs.voidps.engine.client.variable.VariableStore
+import world.gregs.voidps.engine.client.variable.Variable
 import world.gregs.voidps.engine.client.variable.Variables
 import world.gregs.voidps.engine.data.definition.AnimationDefinitions
 import world.gregs.voidps.engine.data.definition.GraphicDefinitions
-import world.gregs.voidps.engine.data.definition.PatrolDefinitions
 import world.gregs.voidps.engine.entity.Entity
-import world.gregs.voidps.engine.entity.character.mode.EmptyMode
 import world.gregs.voidps.engine.entity.character.mode.Mode
-import world.gregs.voidps.engine.entity.character.mode.Patrol
-import world.gregs.voidps.engine.entity.character.mode.interact.Interact
 import world.gregs.voidps.engine.entity.character.mode.move.Movement
 import world.gregs.voidps.engine.entity.character.mode.move.Steps
 import world.gregs.voidps.engine.entity.character.mode.move.target.TileTargetStrategy
@@ -20,10 +14,12 @@ import world.gregs.voidps.engine.entity.character.move.tele
 import world.gregs.voidps.engine.entity.character.npc.NPC
 import world.gregs.voidps.engine.entity.character.player.Player
 import world.gregs.voidps.engine.entity.character.player.appearance
+import world.gregs.voidps.engine.entity.character.player.movementType
 import world.gregs.voidps.engine.entity.character.player.skill.level.Levels
 import world.gregs.voidps.engine.entity.character.player.temporaryMoveType
 import world.gregs.voidps.engine.entity.obj.GameObject
 import world.gregs.voidps.engine.entity.obj.ObjectShape
+import world.gregs.voidps.engine.event.EventDispatcher
 import world.gregs.voidps.engine.get
 import world.gregs.voidps.engine.queue.ActionQueue
 import world.gregs.voidps.engine.suspend.Suspension
@@ -36,40 +32,49 @@ import world.gregs.voidps.type.Delta
 import world.gregs.voidps.type.Direction
 import world.gregs.voidps.type.Distance
 import world.gregs.voidps.type.Tile
-import kotlin.math.round
+import kotlin.coroutines.Continuation
 
-interface Character :
-    Entity,
-    VariableStore,
-    Comparable<Character> {
+interface Character : Entity, Variable, EventDispatcher, Comparable<Character> {
     val index: Int
     val visuals: Visuals
     val levels: Levels
     var collision: CollisionStrategy
     var mode: Mode
-    var queue: ActionQueue<*>
+    var queue: ActionQueue
     var softTimers: Timers
     var suspension: Suspension?
+    var delay: Continuation<Unit>?
     override var variables: Variables
     val steps: Steps
     val size: Int
-    val blockMove: Int
-    val collisionFlag: Int
-    var walkTrigger: (() -> Unit)?
 
-    override fun compareTo(other: Character): Int = index.compareTo(other.index)
-
-    fun clearWalkTrigger() {
-        walkTrigger = null
+    override fun compareTo(other: Character): Int {
+        return index.compareTo(other.index)
     }
 
-    fun walkTrigger() {
-        if (suspension != null) {
-            return
+    fun exactMove(
+        startX: Int,
+        startY: Int,
+        startDelay: Int,
+        endX: Int,
+        endY: Int,
+        endDelay: Int,
+        direction: Direction
+    ) {
+        tele(endX, endY)
+        if (this is Player) {
+            temporaryMoveType = MoveType.Walk
         }
-        val trigger = walkTrigger ?: return
-        walkTrigger = null
-        trigger.invoke()
+        visuals.exactMovement.apply {
+            this.startX = startX - tile.x
+            this.startY = startY - tile.y
+            this.startDelay = startDelay
+            this.endX = endX - tile.x
+            this.endY = endY - tile.y
+            this.endDelay = endDelay
+            this.direction = direction.ordinal
+        }
+        flagExactMovement()
     }
 
     /**
@@ -81,7 +86,7 @@ interface Character :
         }
         tele(delta)
         if (this is Player) {
-            temporaryMoveType = MoveType.Walk
+            movementType = MoveType.Walk
         }
         val startDelta = delta.invert()
         visuals.exactMovement.apply {
@@ -113,24 +118,30 @@ interface Character :
 
     /**
      * Apply [id] graphical effect (aka spotanim) to the character with optional [delay]
-     * @see GraphicDefinitions for adjusting height, rotation, and refresh
+     * @see GraphicDefinitions for adjusting height, rotation and refresh
      */
-    fun gfx(id: String, delay: Int? = null, height: Int? = null) {
-        val definition = GraphicDefinitions.getOrNull(id) ?: return
-        // Graphics fill the secondary slot first; a second graphic in the same tick spills into the
-        // primary slot so both render, rather than overwriting the first.
-        val mask = if (this is Player) VisualMask.PLAYER_GRAPHIC_2_MASK else VisualMask.NPC_GRAPHIC_2_MASK
-        val graphic = if (visuals.flagged(mask)) visuals.primaryGraphic else visuals.secondaryGraphic
+    fun gfx(id: String, delay: Int? = null) {
+        val definition = get<GraphicDefinitions>().getOrNull(id) ?: return
+        val masks = if (this is Player) VisualMask.PLAYER_GRAPHIC_MASKS else VisualMask.NPC_GRAPHIC_MASKS
+
+        var graphic = visuals.graphics[0]
+        for ((index, mask) in masks.withIndex()) {
+            if (visuals.flagged(mask)) {
+                continue
+            }
+            visuals.flag(mask)
+            graphic = visuals.graphics[index]
+            break
+        }
+
         graphic.id = definition.id
         graphic.delay = delay ?: definition["delay", 0]
         val characterHeight = (this as? NPC)?.def?.get("height", 0) ?: 40
-        graphic.height = height ?: (characterHeight + definition["height", -1000]).coerceAtLeast(0)
+        graphic.height = (characterHeight + definition["height", -1000]).coerceAtLeast(0)
         graphic.rotation = definition["rotation", 0]
         graphic.forceRefresh = definition["force_refresh", false]
-        if (visuals.flagged(mask)) {
-            flagPrimaryGraphic()
-        } else {
-            flagSecondaryGraphic()
+        for (g in visuals.graphics) {
+            println(g.id)
         }
     }
 
@@ -138,10 +149,11 @@ interface Character :
      * Remove any graphical effects in progress
      */
     fun clearGfx() {
-        visuals.primaryGraphic.reset()
-        flagPrimaryGraphic()
-        visuals.secondaryGraphic.reset()
-        flagSecondaryGraphic()
+        val masks = if (this is Player) VisualMask.PLAYER_GRAPHIC_MASKS else VisualMask.NPC_GRAPHIC_MASKS
+        for ((index, mask) in masks.withIndex()) {
+            visuals.flag(mask)
+            visuals.graphics[index].reset()
+        }
     }
 
     /**
@@ -149,7 +161,7 @@ interface Character :
      * with optional [delay] and [override]ing of the previous animation
      */
     fun anim(id: String, delay: Int? = null, override: Boolean = false): Int {
-        val definition = AnimationDefinitions.getOrNull(id) ?: return -1
+        val definition = get<AnimationDefinitions>().getOrNull(id) ?: return -1
         val anim = visuals.animation
         if (!override && definition.priority < anim.priority) {
             return -1
@@ -203,19 +215,18 @@ interface Character :
      * The direction the character is currently facing
      */
     val direction: Direction
-        get() = Direction.of((visuals.face.targetX - tile.x).coerceIn(-1, 1), (visuals.face.targetY - tile.y).coerceIn(-1, 1))
+        get() = Direction.of(visuals.face.targetX - tile.x, visuals.face.targetY - tile.y)
 
     /**
      * Turn to face a [direction]
      */
-    fun face(direction: Direction, update: Boolean = true): Boolean {
-        return face(Delta(direction.delta.x * 100, direction.delta.y * 100), update)
-    }
+    fun face(direction: Direction, update: Boolean = true) = face(direction.delta, update)
 
     /**
      * Turn to face a [tile]
      */
     fun face(tile: Tile, update: Boolean = true) = face(tile.delta(this.tile), update)
+
 
     /**
      * Turn to face [delta]
@@ -260,11 +271,13 @@ interface Character :
         return true
     }
 
-    private fun nearestTile(entity: Entity): Tile = when (entity) {
-        is GameObject -> Distance.nearest(entity.tile, entity.width, entity.height, this.tile)
-        is NPC -> Distance.nearest(entity.tile, entity.def.size, entity.def.size, this.tile)
-        is Player -> Distance.nearest(entity.tile, entity.appearance.size, entity.appearance.size, this.tile)
-        else -> entity.tile
+    private fun nearestTile(entity: Entity): Tile {
+        return when (entity) {
+            is GameObject -> Distance.getNearest(entity.tile, entity.width, entity.height, this.tile)
+            is NPC -> Distance.getNearest(entity.tile, entity.def.size, entity.def.size, this.tile)
+            is Player -> Distance.getNearest(entity.tile, entity.appearance.size, entity.appearance.size, this.tile)
+            else -> entity.tile
+        }
     }
 
     /**
@@ -283,10 +296,12 @@ interface Character :
     /**
      * Check if character is currently watching [character]
      */
-    fun watching(character: Character): Boolean = if (character is Player) {
-        visuals.watch.index == character.index or 0x8000
-    } else {
-        visuals.watch.index == character.index
+    fun watching(character: Character): Boolean {
+        return if (character is Player) {
+            visuals.watch.index == character.index or 0x8000
+        } else {
+            visuals.watch.index == character.index
+        }
     }
 
     /**
@@ -295,131 +310,6 @@ interface Character :
     fun clearWatch() {
         visuals.watch.index = -1
         flagWatch()
-    }
-
-    /**
-     * Trigger something on next attempted [world.gregs.voidps.network.client.instruction.Walk].
-     */
-    fun walkTrigger(block: () -> Unit) {
-        this.walkTrigger = block
-    }
-
-    /**
-     * Prevents non-interface player input and most processing
-     * Cannot be cancelled.
-     */
-    suspend fun delay(ticks: Int = 1, cancellable: Boolean = false) {
-        if (ticks <= 0) {
-            return
-        }
-        if (!cancellable) {
-            this["delay"] = ticks
-        }
-        suspendCancellableCoroutine {
-            suspension = Suspension.Delay(it, ticks)
-        }
-        suspension = null
-    }
-
-    /**
-     * Delay until the appeared location of the character has moved [delta] in [delay] time
-     */
-    suspend fun exactMoveDelay(delta: Delta, delay: Int = tile.distanceTo(tile.add(delta)) * 30, direction: Direction = Direction.NONE) {
-        exactMove(delta, delay, direction)
-        delay(round(delay / 30.0).toInt())
-    }
-
-    /**
-     * Delay until the appeared location of the character has moved to [target] in [delay] time
-     */
-    suspend fun exactMoveDelay(target: Tile, delay: Int = tile.distanceTo(target) * 30, direction: Direction = Direction.NONE, startDelay: Int = 0) {
-        exactMove(target, delay, direction, startDelay)
-        delay(round(delay / 30.0).toInt())
-    }
-
-    /**
-     * Delay until characters animation [id] is complete
-     * @param override the current animation
-     */
-    suspend fun animDelay(id: String, override: Boolean = false) {
-        val ticks = anim(id, override = override)
-        delay(ticks)
-    }
-
-    /**
-     * Forces the character to walk to a tile
-     */
-    suspend fun walkToDelay(tile: Tile, forceWalk: Boolean = false) {
-        walkTo(tile, noCollision = false, forceWalk = forceWalk)
-        delayTarget(tile)
-    }
-
-    /**
-     * Force a character to walk to tile ignoring collisions
-     */
-    suspend fun walkOverDelay(tile: Tile, forceWalk: Boolean = true) {
-        walkTo(tile, noCollision = true, forceWalk = forceWalk)
-        delayTarget(tile)
-    }
-
-    private suspend fun delayTarget(target: Tile) {
-        var count = 0
-        if (tile.distanceTo(target) >= 50) {
-            return
-        }
-        while (tile != target && count++ < 50 && mode != EmptyMode) {
-            delay()
-        }
-    }
-
-    /**
-     * Walks a route
-     */
-    suspend fun patrolDelay(route: String, loop: Boolean = true, noCollision: Boolean = false) {
-        val patrols: PatrolDefinitions = get()
-        val patrol = patrols.get(route)
-        val waypoints = patrol.waypoints
-        if (waypoints.isEmpty()) {
-            return
-        }
-        mode = Patrol(this, waypoints, loop, noCollision)
-        while (mode is Patrol) {
-            delay()
-        }
-    }
-
-    /**
-     * Interrupt-able pausing of scripts
-     * Note: can't be used after a dialogue suspension in an interaction as the
-     * interaction will have finished and there will be nothing to resume the suspension
-     */
-    suspend fun pause(ticks: Int) {
-        delay(ticks, cancellable = true)
-    }
-
-    /**
-     * Movement delay, typically operating/interacting with an object or floor item that performs an animation or exact movement
-     */
-    suspend fun arriveDelay() {
-        val delay = steps.last - GameLoop.tick
-        if (delay <= 0) {
-            return
-        }
-        delay(delay)
-    }
-
-    /**
-     * Set the range a player can interact with their target from
-     */
-    suspend fun approachRange(range: Int?, update: Boolean = true) {
-        val interact = mode as? Interact ?: return
-        interact.updateRange(range, update)
-        if (range != null) {
-            while (!interact.arrived(range) && steps.isNotEmpty()) {
-                pause(1)
-            }
-            interact.launched = true
-        }
     }
 
 }

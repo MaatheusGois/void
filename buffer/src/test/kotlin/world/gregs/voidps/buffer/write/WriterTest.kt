@@ -85,8 +85,8 @@ abstract class WriterTest {
     @Test
     fun `Write byte inverse`() {
         // When
-        buffer.writeByteInverse(2)
-        buffer.writeByteInverse(-2)
+        buffer.p1Alt2(2)
+        buffer.p1Alt2(-2)
         // Then
         assertBytes(-2, 2)
     }
@@ -94,8 +94,8 @@ abstract class WriterTest {
     @Test
     fun `Write byte subtract`() {
         // When
-        buffer.writeByteSubtract(2)
-        buffer.writeByteSubtract(-2)
+        buffer.p1Alt3(2)
+        buffer.p1Alt3(-2)
         // Then
         assertBytes(126, -126)
     }
@@ -112,8 +112,8 @@ abstract class WriterTest {
     @Test
     fun `Write short add`() {
         // When
-        buffer.writeShortAdd(2)
-        buffer.writeShortAdd(-2)
+        buffer.p2Alt2(2)
+        buffer.p2Alt2(-2)
         // Then
         assertBytes(0, -126, -1, 126)
     }
@@ -121,8 +121,8 @@ abstract class WriterTest {
     @Test
     fun `Write short little endian`() {
         // When
-        buffer.writeShortLittle(2)
-        buffer.writeShortLittle(-2)
+        buffer.ip2(2)
+        buffer.ip2(-2)
         // Then
         assertBytes(2, 0, -2, -1)
     }
@@ -130,8 +130,8 @@ abstract class WriterTest {
     @Test
     fun `Write short little endian add`() {
         // When
-        buffer.writeShortAddLittle(2)
-        buffer.writeShortAddLittle(-2)
+        buffer.p2Alt3(2)
+        buffer.p2Alt3(-2)
         // Then
         assertBytes(-126, 0, 126, -1)
     }

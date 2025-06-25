@@ -1,29 +1,21 @@
 package world.gregs.voidps.network.login.protocol.decode
 
 import io.ktor.utils.io.core.*
-import kotlinx.io.Source
 import world.gregs.voidps.cache.definition.data.InterfaceDefinition
 import world.gregs.voidps.network.client.Instruction
 import world.gregs.voidps.network.client.instruction.InteractInterfaceFloorItem
-import world.gregs.voidps.network.login.protocol.Decoder
-import world.gregs.voidps.network.login.protocol.readBoolean
-import world.gregs.voidps.network.login.protocol.readUnsignedIntMiddle
-import world.gregs.voidps.network.login.protocol.readUnsignedShortAdd
+import world.gregs.voidps.network.login.protocol.*
 
 class InterfaceOnFloorItemDecoder : Decoder(15) {
 
-    override suspend fun decode(packet: Source): Instruction {
-        val x = packet.readShortLittleEndian().toInt()
-        val floorItem = packet.readUnsignedShortAdd()
-        val itemSlot = packet.readShortLittleEndian().toInt()
+    override suspend fun decode(packet: ByteReadPacket): Instruction {
+        val x = packet.readShort().toInt()
         val y = packet.readShort().toInt()
+        val item = packet.g2Alt3()
+        val packed = packet.g4Alt3()
+        val itemSlot = packet.g2Alt1()
         val run = packet.readBoolean()
-        var item = packet.readUnsignedShortAdd()
-        if (item == 65535) {
-            // readShortAdd doesn't seem to decode > 20k correctly, but client always sends -1 anyway
-            item = -1
-        }
-        val packed = packet.readUnsignedIntMiddle()
+        val floorItem = packet.g2Alt1()
         return InteractInterfaceFloorItem(
             floorItem,
             x,
@@ -31,7 +23,8 @@ class InterfaceOnFloorItemDecoder : Decoder(15) {
             InterfaceDefinition.id(packed),
             InterfaceDefinition.componentId(packed),
             item,
-            itemSlot,
+            itemSlot
         )
     }
+
 }

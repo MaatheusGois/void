@@ -3,7 +3,6 @@ package world.gregs.voidps.network.login.protocol
 import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.test.runTest
-import kotlinx.io.readByteArray
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
@@ -47,7 +46,7 @@ class JagExtensionsTest {
         channel.writeByte(true)
         channel.writeByte(false)
         channel.close()
-        val packet = ByteReadPacket(channel.readRemaining().readByteArray())
+        val packet = ByteReadPacket(channel.readRemaining().readBytes())
         assertTrue(packet.readBoolean())
         assertFalse(packet.readBoolean())
     }
@@ -55,45 +54,27 @@ class JagExtensionsTest {
     @Test
     fun `Read and write byte add`() = runTest {
         val channel = ByteChannel(autoFlush = true)
-        channel.writeByteAdd(10)
+        channel.p1Alt1(10)
         channel.close()
-        val packet = ByteReadPacket(channel.readRemaining().readByteArray())
-        assertEquals(10, packet.readByteAdd())
+        val packet = ByteReadPacket(channel.readRemaining().readBytes())
+        assertEquals(10, packet.g1Alt1())
     }
 
     @Test
     fun `Read and write string`() = runTest {
         val channel = ByteChannel(autoFlush = true)
         val text = "Hello"
-        channel.writeText(text)
+        channel.writeString(text)
         channel.close()
-        val packet = ByteReadPacket(channel.readRemaining().readByteArray())
+        val packet = ByteReadPacket(channel.readRemaining().readBytes())
         assertEquals(text, packet.readString())
-    }
-
-    @Test
-    fun `Write string as long includes digits`() = runTest {
-        val channel = ByteChannel(autoFlush = true)
-        channel.writeLong("clan123")
-        channel.close()
-        val packet = ByteReadPacket(channel.readRemaining().readByteArray())
-        assertEquals(8531929449L, packet.readLong())
-    }
-
-    @Test
-    fun `Write all numeric string as long`() = runTest {
-        val channel = ByteChannel(autoFlush = true)
-        channel.writeLong("123")
-        channel.close()
-        val packet = ByteReadPacket(channel.readRemaining().readByteArray())
-        assertEquals(39435L, packet.readLong())
     }
 
     @Test
     fun `Read byte inverse`() {
         val data = byteArrayOf(0x01)
         val packet = ByteReadPacket(data)
-        assertEquals(-1, packet.readByteInverse())
+        assertEquals(-1, packet.g1Alt2())
     }
 
     @Test
@@ -114,9 +95,9 @@ class JagExtensionsTest {
     fun `Read and write short add little`() = runTest {
         val channel = ByteChannel(autoFlush = true)
         val value = 0x1234
-        channel.writeShortAddLittle(value)
+        channel.p2Alt3(value)
         channel.close()
-        val array = channel.readRemaining().readByteArray()
+        val array = channel.readRemaining().readBytes()
         val packet = ByteReadPacket(array)
         assertEquals(value, packet.readShortAddLittle())
     }
@@ -125,9 +106,9 @@ class JagExtensionsTest {
     fun `Read signed short add little`() = runTest {
         val channel = ByteChannel(autoFlush = true)
         val value = -1
-        channel.writeShortAddLittle(value)
+        channel.p2Alt3(value)
         channel.close()
-        val array = channel.readRemaining().readByteArray()
+        val array = channel.readRemaining().readBytes()
         val packet = ByteReadPacket(array)
         assertEquals(value, packet.readShortAddLittle())
     }

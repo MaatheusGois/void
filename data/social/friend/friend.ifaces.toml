@@ -1,10 +1,27 @@
 [friends_list]
 id = 550
 type = "friends_list_tab"
+components = {
+  add = 7,
+  delete = 8,
+}
 
-[.add]
-id = 7
+[friends_chat]
+id = 1109
+type = "friends_chat_tab"
+components = {
+add = 7,
+delete = 8,
+}
 
-[.delete]
-id = 8
-
+[friends_chat_setup]
+id = 590
+type = "main_screen"
+components = {
+name = 22,
+enter = 23,
+talk = 24,
+kick = 25,
+loot = 26,
+coin_share = 33,
+}

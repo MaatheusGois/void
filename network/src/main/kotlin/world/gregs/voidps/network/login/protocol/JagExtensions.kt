@@ -1,11 +1,10 @@
+@file:OptIn(ExperimentalUnsignedTypes::class)
+
 package world.gregs.voidps.network.login.protocol
 
 import io.ktor.utils.io.*
-import io.ktor.utils.io.bits.reverseByteOrder
 import io.ktor.utils.io.core.*
-import kotlinx.io.Source
-import kotlinx.io.readUByte
-import world.gregs.voidps.buffer.write.ArrayWriter
+import world.gregs.voidps.buffer.write.BufferWriter
 import kotlin.random.Random
 import kotlin.text.toByteArray
 
@@ -13,37 +12,37 @@ suspend fun ByteReadChannel.readUByte(): Int = readByte().toInt() and 0xff
 
 suspend fun ByteReadChannel.readUShort(): Int = (readUByte() shl 8) or readUByte()
 
-suspend fun ByteReadChannel.readMedium(): Int = (readByte().toInt() shl 16) + (readByte().toInt() shl 8) + readByte().toInt()
+suspend fun ByteReadChannel.readMedium(): Int {
+    return (readByte().toInt() shl 16) + (readByte().toInt() shl 8) + readByte().toInt()
+}
 
-suspend fun ByteReadChannel.readUMedium(): Int = (readUByte() shl 16) + (readUByte() shl 8) + readUByte()
+suspend fun ByteReadChannel.readUMedium(): Int {
+    return (readUByte() shl 16) + (readUByte() shl 8) + readUByte()
+}
 
 suspend fun ByteWriteChannel.writeByte(value: Boolean) = writeByte(if (value) 1 else 0)
 
-suspend fun ByteWriteChannel.writeByteAdd(value: Boolean) = writeByteAdd(if (value) 1 else 0)
+suspend fun ByteWriteChannel.p1Alt1(value: Boolean) = p1Alt1(if (value) 1 else 0)
 
-suspend fun ByteWriteChannel.writeByteInverse(value: Boolean) = writeByteInverse(if (value) 1 else 0)
+suspend fun ByteWriteChannel.p1Alt2(value: Boolean) = p1Alt2(if (value) 1 else 0)
 
-suspend fun ByteWriteChannel.writeByte(value: Int) = writeByte(value.toByte())
+suspend fun ByteWriteChannel.p1Alt1(value: Int) = writeByte(value + 128)
 
-suspend fun ByteWriteChannel.writeByteAdd(value: Int) = writeByte(value + 128)
+suspend fun ByteWriteChannel.p1Alt2(value: Int) = writeByte(-value)
 
-suspend fun ByteWriteChannel.writeByteInverse(value: Int) = writeByte(-value)
-
-suspend fun ByteWriteChannel.writeByteSubtract(value: Int) = writeByte(-value + 128) // p1b_alt3
+suspend fun ByteWriteChannel.p1Alt3(value: Int) = writeByte(-value + 128) // p1b_alt3
 
 suspend fun ByteWriteChannel.writeBytes(value: ByteArray) = writeFully(value)
 
-suspend fun ByteWriteChannel.writeShort(value: Int) = writeShort(value.toShort())
-
-suspend fun ByteWriteChannel.writeShortAdd(value: Int) {
+suspend fun ByteWriteChannel.p2Alt2(value: Int) {
     writeByte(value shr 8)
-    writeByteAdd(value)
+    p1Alt1(value)
 }
 
-suspend fun ByteWriteChannel.writeShortLittle(value: Int) = writeShort(value.toShort().reverseByteOrder()) // , ByteOrder.LITTLE_ENDIAN)
+suspend fun ByteWriteChannel.ip2(value: Int) = writeShort(value.toShort(), ByteOrder.LITTLE_ENDIAN)
 
-suspend fun ByteWriteChannel.writeShortAddLittle(value: Int) {
-    writeByteAdd(value)
+suspend fun ByteWriteChannel.p2Alt3(value: Int) {
+    p1Alt1(value)
     writeByte(value shr 8)
 }
 
@@ -58,12 +57,12 @@ suspend fun ByteWriteChannel.writeIntInverse(value: Int) {
     writeByte(value shr 8)
     writeByte(value shr 24)
     writeByte(value shr 16)
-    writeByteInverse(value)
+    p1Alt2(value)
 }
 
-suspend fun ByteWriteChannel.writeIntLittle(value: Int) = writeInt(value.reverseByteOrder()) // , ByteOrder.LITTLE_ENDIAN)
+suspend fun ByteWriteChannel.p4Alt1(value: Int) = writeInt(value, ByteOrder.LITTLE_ENDIAN)
 
-suspend fun ByteWriteChannel.writeIntInverseMiddle(value: Int) {
+suspend fun ByteWriteChannel.p4Alt3(value: Int) {
     writeByte(value shr 16)
     writeByte(value shr 24)
     writeByte(value)
@@ -76,7 +75,7 @@ suspend fun ByteWriteChannel.writeMedium(value: Int) {
     writeByte(value)
 }
 
-suspend fun ByteWriteChannel.writeMediumV2(value: Int) {
+suspend fun ByteWriteChannel.p3Alt1(value: Int) {
     writeByte(value shr 16)
     writeByte(value)
     writeByte(value shr 8)
@@ -90,7 +89,7 @@ suspend fun ByteWriteChannel.writeSmart(value: Int) {
     }
 }
 
-suspend fun ByteWriteChannel.writeText(value: String?) {
+suspend fun ByteWriteChannel.writeString(value: String?) {
     if (value != null) {
         writeFully(value.toByteArray())
     }
@@ -114,7 +113,7 @@ class BitAccessor {
         var max: Int
         while (numBits > bitOffset) {
             tmp = data[byteIndex].toInt()
-            max = ArrayWriter.BIT_MASKS[bitOffset]
+            max = BufferWriter.BIT_MASKS[bitOffset]
             tmp = tmp and max.inv() or (value shr numBits - bitOffset and max)
             data[byteIndex++] = tmp.toByte()
             numBits -= bitOffset
@@ -122,7 +121,7 @@ class BitAccessor {
         }
 
         tmp = data[byteIndex].toInt()
-        max = ArrayWriter.BIT_MASKS[numBits]
+        max = BufferWriter.BIT_MASKS[numBits]
         if (numBits == bitOffset) {
             tmp = tmp and max.inv() or (value and max)
         } else {
@@ -150,10 +149,10 @@ suspend fun ByteWriteChannel.respond(value: Int) {
 
 suspend fun ByteWriteChannel.finish(value: Int) {
     respond(value)
-    flushAndClose()
+    close()
 }
 
-fun Source.readString(): String {
+fun ByteReadPacket.readString(): String {
     val sb = StringBuilder()
     var b: Int
     while (remaining > 0) {
@@ -166,37 +165,94 @@ fun Source.readString(): String {
     return sb.toString()
 }
 
-fun Source.readBoolean(): Boolean = readByte().toInt() == 1
+fun ByteReadPacket.readGjstr(): String {
+    val bytes = buildList {
+        while (true) {
+            val byte = readByte()
+            if (byte == 0.toByte()) break
+            add(byte)
+        }
+    }
+    val array = bytes.toByteArray()
+    return decode(0, array, array.size)
+}
 
-fun Source.readBooleanInverse() = readByteInverse() == 1
+private val CODE_PAGE = charArrayOf(
+    '\u20AC', '\u0000', '\u201A', '\u0192', '\u201E', '\u2026', '\u2020', '\u2021',
+    '\u02C6', '\u2030', '\u0160', '\u2039', '\u0152', '\u0000', '\u017D', '\u0000',
+    '\u0000', '\u2018', '\u2019', '\u201C', '\u201D', '\u2022', '\u2013', '\u2014',
+    '\u02DC', '\u2122', '\u0161', '\u203A', '\u0153', '\u0000', '\u017E', '\u0178'
+)
 
-fun Source.readBooleanSubtract() = readByteSubtract() == 1
+fun decode(off: Int, data: ByteArray, len: Int): String {
+    val chars = CharArray(len)
+    var index = 0
 
-fun Source.readBooleanAdd() = readByteAdd() == 1
+    for (i in 0 until len) {
+        var c = data[i + off].toInt() and 0xFF
+        if (c == '\u0000'.code) {
+            continue
+        }
 
-fun Source.readByteAdd(): Int = (readByte() - 128).toByte().toInt()
+        if (c > '\u007F'.code && c < '\u00A0'.code) {
+            var v: Char = CODE_PAGE[c - '\u0080'.code]
+            if (v == '\u0000') {
+                v = '?'
+            }
 
-fun Source.readByteInverse(): Int = -readByte()
+            c = v.code
+        }
 
-fun Source.readByteSubtract(): Int = (readByteInverse() + 128).toByte().toInt()
+        chars[index++] = c.toChar()
+    }
 
-fun Source.readShortAdd(): Int = (readByte().toInt() shl 8) or readByteAdd()
+    return String(chars, 0, index)
+}
 
-fun Source.readShortAddLittle(): Int = ((readByte().toInt() - 128) and 0xff) or (readByte().toInt() shl 8)
 
-fun Source.readUnsignedShortAdd(): Int = (readUByte().toInt() shl 8) or ((readUByte().toInt() - 128) and 0xff)
+fun ByteReadPacket.readBoolean(): Boolean = readByte().toInt() == 1
 
-fun Source.readUnsignedShortLittle(): Int = readUByte().toInt() or (readUByte().toInt() shl 8)
+fun ByteReadPacket.readBooleanInverse() = g1Alt2() == 1
 
-fun Source.readUnsignedShortAddLittle(): Int = (readByte() - 128 and 0xff) + (readByte().toInt() shl 8 and 0xff00)
+fun ByteReadPacket.readBooleanSubtract() = g1Alt3() == 1
 
-fun Source.readUnsignedIntMiddle(): Int = (readUByte().toInt() shl 8) or readUByte().toInt() or (readUByte().toInt() shl 24) or (readUByte().toInt() shl 16)
+fun ByteReadPacket.readBooleanAdd() = g1Alt1() == 1
 
-fun Source.readIntInverseMiddle(): Int = (readByte().toInt() shl 16) or (readByte().toInt() shl 24) or readUByte().toInt() or (readByte().toInt() shl 8)
+fun ByteReadPacket.g1Alt1(): Int = (readByte() - 128).toByte().toInt()
 
-fun Source.readUnsignedIntInverseMiddle(): Int = (readUByte().toInt() shl 16) or (readUByte().toInt() shl 24) or readUByte().toInt() or (readUByte().toInt() shl 8)
+fun ByteReadPacket.g1Alt2(): Int = -readByte()
 
-fun Source.readSmart(): Int {
+fun ByteReadPacket.g1Alt3(): Int = (g1Alt2() + 128).toByte().toInt()
+
+fun ByteReadPacket.readShortAdd(): Int = (readByte().toInt() shl 8) or g1Alt1()
+
+fun ByteReadPacket.readShortAddLittle(): Int = ((readByte().toInt() - 128) and 0xff) or (readByte().toInt() shl 8)
+
+fun ByteReadPacket.readUnsignedShortAdd(): Int = (readUByte().toInt() shl 8) + ((readByte() - 128) and 0xFF)
+
+fun ByteReadPacket.readUnsignedShort128(): Int =
+    (readUByte().toInt() shl 8) + ((readByte() - 128) and 0xFF)
+
+fun ByteReadPacket.g2Alt3(): Int =
+    ((readByte().toInt() - 128) and 0xFF) + ((readUByte().toInt() and 0xFF) shl 8).toShort().toInt()
+
+fun ByteReadPacket.g2Alt1(): Int = readUByte().toInt() or (readUByte().toInt() shl 8)
+
+fun ByteReadPacket.g2Alt2(): Int = (readUByte().toInt() shl 8) or (readByte() - 128 and 0xFF)
+
+fun ByteReadPacket.readUnsignedShortAddLittle(): Int = (readByte() - 128 and 0xff) + (readByte().toInt() shl 8 and 0xff00)
+
+fun ByteReadPacket.g4Alt2(): Int = (readUByte().toInt() shl 8) or readUByte().toInt() or (readUByte().toInt() shl 24) or (readUByte().toInt() shl 16)
+
+fun ByteReadPacket.readIntInverseMiddle(): Int = (readByte().toInt() shl 16) or (readByte().toInt() shl 24) or readUByte().toInt() or (readByte().toInt() shl 8)
+
+fun ByteReadPacket.g4Alt3(): Int = (readUByte().toInt() shl 16) or (readUByte().toInt() shl 24) or readUByte().toInt() or (readUByte().toInt() shl 8)
+
+fun ByteReadPacket.readIntV2(): Int = (readUByte().toInt() shl 16) + (readUByte().toInt() shl 24) + readUByte().toInt() + (readUByte().toInt() shl 8)
+
+fun ByteReadPacket.g4Alt1(): Int = readUByte().toInt() or (readUByte().toInt() shl 8) or (readUByte().toInt() shl 16) or (readUByte().toInt() shl 24)
+
+fun ByteReadPacket.readSmart(): Int {
     val peek = readUByte().toInt()
     return if (peek < 128) {
         peek and 0xFF
@@ -208,9 +264,9 @@ fun Source.readSmart(): Int {
 suspend fun ByteWriteChannel.writeName(displayName: String, responseName: String = displayName) {
     val different = displayName != responseName
     writeByte(different)
-    writeText(displayName)
+    writeString(displayName)
     if (different) {
-        writeText(responseName)
+        writeString(responseName)
     }
 }
 
@@ -233,7 +289,7 @@ suspend fun ByteWriteChannel.writeLong(string: String) {
         when (char) {
             in 65..90 -> long += char - 64L
             in 97..122 -> long += char - 96L
-            in 48..57 -> long += char - 21L
+            in 0..9 -> long += char - 21L
         }
     }
     while (long % 37L == 0L && long != 0L) {
