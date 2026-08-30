@@ -53,6 +53,13 @@ For more details see the full [Installation Guide](https://github.com/GregHib/vo
 > [!NOTE]
 > For common problems see the [Troubleshooting Guide](https://github.com/GregHib/void/wiki/Troubleshooting).
 
+### Client compatibility
+
+Void currently targets revision **634**. The [StrongHold 667 client](https://github.com/StrongHold/runescape-667)
+cannot be used by changing `server.revision` alone: revision 667 also requires a matching cache and revision-specific
+login, JS5, and game packet protocols. Use the Void client above unless the server protocol and cache have been ported
+to revision 667.
+
 ## Development
 
 Use [IntelliJ](https://www.jetbrains.com/idea/download/) (which is free to use) to develop with Void.
