@@ -41,6 +41,7 @@ object Protocol {
     const val MIDI_SOUND = 78
     const val PLAY_MUSIC = 31
     const val INTERFACE_WINDOW = 67
+    const val HINT_ARROW = 81
     const val PLAYER_UPDATING = 69
     const val INTERFACE_CLOSE = 73
     const val UPDATE_INV_PARTIAL = 80
@@ -76,13 +77,15 @@ object Protocol {
     const val PUBLIC_STATUS = 83 //
     const val PRIVATE_STATUS = 113 //
     const val PRIVATE_QUICK_CHAT_FROM = 42
-    const val PRIVATE_CHAT_TO = 61 //
+    const val PRIVATE_CHAT_TO = 77 // MESSAGE_PRIVATE_ECHO
     const val PRIVATE_QUICK_CHAT_TO = 97
     const val CAMERA_MOVE = 29
     const val CAMERA_TURN = 127
     const val CAMERA_SHAKE = 34
     const val CAMERA_RESET = 10
     const val MINIMAP_STATE = 68
+    const val GRAND_EXCHANGE_SLOT = 61 // UPDATE_STOCKMARKET_SLOT
+    const val SYSTEM_UPDATE = 125 // UPDATE_REBOOT_TIMER
 
     object Batch {
         const val OBJECT_ADD = 0

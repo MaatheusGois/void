@@ -7,6 +7,7 @@ import world.gregs.voidps.network.login.Protocol.CLIENT_VARP_LARGE
 import world.gregs.voidps.network.login.protocol.p1Alt1
 import world.gregs.voidps.network.login.protocol.p4Alt3
 import world.gregs.voidps.network.login.protocol.p2Alt2
+import world.gregs.voidps.network.login.protocol.writeShort
 
 /**
  * A variable player config; also known as "Config", known in the client as "clientvarp"

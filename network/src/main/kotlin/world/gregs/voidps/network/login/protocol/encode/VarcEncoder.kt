@@ -1,5 +1,7 @@
 package world.gregs.voidps.network.login.protocol.encode
 
+import io.ktor.utils.io.writeInt
+
 import world.gregs.voidps.network.client.Client
 import world.gregs.voidps.network.login.Protocol.CLIENT_VARC
 import world.gregs.voidps.network.login.Protocol.CLIENT_VARC_LARGE

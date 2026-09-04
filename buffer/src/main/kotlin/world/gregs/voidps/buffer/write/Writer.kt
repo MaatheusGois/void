@@ -1,6 +1,7 @@
 package world.gregs.voidps.buffer.write
 
 
+import world.gregs.voidps.buffer.Unicode
 /**
  * All functions relative to writing directly to a packet are done by this class
  */
@@ -69,9 +70,21 @@ interface Writer {
         writeByte(0)
     }
 
+    fun writeChar(value: Char) = writeByte(Unicode.charToByte(value))
+
     fun writeBytes(value: ByteArray)
 
     fun writeBytes(data: ByteArray, offset: Int, length: Int)
+
+    fun writeBytes(value: ShortArray)
+
+    fun writeBytes(value: IntArray)
+
+    fun writeBytes(value: LongArray)
+
+    fun writeBytes(value: FloatArray)
+
+    fun writeBytes(value: DoubleArray)
 
     fun startBitAccess()
 

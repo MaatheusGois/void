@@ -1,5 +1,7 @@
 package world.gregs.voidps.network.login.protocol.encode
 
+import io.ktor.utils.io.writeInt
+
 import world.gregs.voidps.network.client.Client
 import world.gregs.voidps.network.login.Protocol.CLIENT_VARBIT
 import world.gregs.voidps.network.login.Protocol.CLIENT_VARBIT_LARGE
@@ -19,7 +21,7 @@ fun Client.sendVarbit(id: Int, value: Int) {
     } else {
         send(CLIENT_VARBIT_LARGE) {
             writeInt(value)
-            writeShort(id.toShort())
+            writeShort(id)
         }
     }
 }

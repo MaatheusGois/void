@@ -86,7 +86,7 @@ data class BotSwitchSetup(
                 interfaceId = interfaceDef.id,
                 componentId = componentId,
                 itemId = invItemId,
-                itemSlot = invSlot,
+                slotId = invSlot,
                 option = optionIndex,
             ),
         )

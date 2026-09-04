@@ -6,29 +6,21 @@ import world.gregs.voidps.engine.client.playMusicTrack
 import world.gregs.voidps.engine.client.sendScript
 import world.gregs.voidps.engine.client.ui.chat.Colour
 import world.gregs.voidps.engine.client.ui.chat.Colours
-import world.gregs.voidps.engine.client.ui.event.CloseInterface
-import world.gregs.voidps.engine.client.ui.event.InterfaceClosed
-import world.gregs.voidps.engine.client.ui.event.InterfaceOpened
-import world.gregs.voidps.engine.client.ui.event.InterfaceRefreshed
 import world.gregs.voidps.engine.data.definition.AnimationDefinitions
 import world.gregs.voidps.engine.data.definition.EnumDefinitions
 import world.gregs.voidps.engine.data.definition.InterfaceDefinitions
 import world.gregs.voidps.engine.entity.character.Character
 import world.gregs.voidps.engine.entity.character.player.Player
 import world.gregs.voidps.engine.entity.item.Item
-import world.gregs.voidps.engine.event.EventDispatcher
-import world.gregs.voidps.engine.get
-import world.gregs.voidps.network.client.Client
+import world.gregs.voidps.engine.suspend.Suspension
 import world.gregs.voidps.network.login.protocol.encode.*
 
 /**
  * API for the interacting and tracking of client interfaces
  */
 class Interfaces(
-    private val events: EventDispatcher,
-    internal var client: Client? = null,
-    internal val definitions: InterfaceDefinitions,
-    private val interfaces: MutableMap<String, String> = Object2ObjectOpenHashMap()
+    private val player: Player,
+    private val interfaces: MutableMap<String, String> = Object2ObjectOpenHashMap(),
 ) {
     var displayMode = 0
 
@@ -49,9 +41,6 @@ class Interfaces(
     }
 
     fun close(id: String?): Boolean {
-        if (id != null && !getType(id).startsWith("dialogue_box")) {
-            events.emit(CloseInterface)
-        }
         if (id != null && remove(id)) {
             closeChildrenOf(id)
             return true
@@ -70,19 +59,23 @@ class Interfaces(
     fun remove(id: String): Boolean {
         if (interfaces.remove(getType(id), id)) {
             sendClose(id)
-            events.emit(InterfaceClosed(id))
-            (events as? Player)?.queue?.clearWeak()
+            InterfaceApi.close(player, id)
+            player.queue.clearWeak()
             return true
         }
         return false
     }
 
-    fun get(type: String): String? {
-        return interfaces[type]
-    }
+    fun get(type: String): String? = interfaces[type]
 
-    fun contains(id: String): Boolean {
-        return interfaces[getType(id)] == id
+    fun contains(id: String): Boolean = interfaces[getType(id)] == id
+
+    fun refresh(id: String) {
+        if (!hasOpenOrRootParent(id)) {
+            return
+        }
+        sendOpen(id)
+        notifyRefresh(id)
     }
 
     fun refresh() {
@@ -93,8 +86,8 @@ class Interfaces(
     }
 
     private fun hasOpenOrRootParent(id: String): Boolean {
-        val parent = definitions.getOrNull(id)?.parent(resizable) ?: return false
-        return parent == -1 || contains(definitions.get(InterfaceDefinition.id(parent)).stringId)
+        val parent = InterfaceDefinitions.getOrNull(id)?.parent(resizable) ?: return false
+        return parent == -1 || contains(InterfaceDefinitions.get(InterfaceDefinition.id(parent)).stringId)
     }
 
     private fun sendIfOpened(id: String): Boolean {
@@ -102,7 +95,7 @@ class Interfaces(
         if (interfaces[type] != id) {
             interfaces[type] = id
             sendOpen(id)
-            events.emit(InterfaceOpened(id))
+            InterfaceApi.open(player, id)
             notifyRefresh(id)
             return true
         }
@@ -118,8 +111,8 @@ class Interfaces(
             if (getParent(id) == parent) {
                 it.remove()
                 sendClose(id)
-                events.emit(InterfaceClosed(id))
-                (events as? Player)?.queue?.clearWeak()
+                InterfaceApi.close(player, id)
+                player.queue.clearWeak()
                 children.add(id)
             }
         }
@@ -129,91 +122,97 @@ class Interfaces(
     }
 
     private fun getParent(id: String): String {
-        val parent = definitions.getOrNull(id)?.parent(resizable) ?: return ""
+        val parent = InterfaceDefinitions.getOrNull(id)?.parent(resizable) ?: return ""
         return if (parent == -1) {
             ROOT_ID
         } else {
-            definitions.get(InterfaceDefinition.id(parent)).stringId
+            InterfaceDefinitions.get(InterfaceDefinition.id(parent)).stringId
         }
     }
 
-    private fun getType(id: String): String {
-        return definitions.getOrNull(id)?.type ?: DEFAULT_TYPE
-    }
+    private fun getType(id: String): String = InterfaceDefinitions.getOrNull(id)?.type ?: DEFAULT_TYPE
 
     private fun sendOpen(id: String) {
-        val definition = definitions.getOrNull(id) ?: return
+        val definition = InterfaceDefinitions.getOrNull(id) ?: return
         val parent = definition.parent(resizable)
         if (parent == -1) { // root
-            client?.updateInterface(definition.id, 0)
+            player.client?.updateInterface(definition.id, 0)
         } else {
-            client?.openInterface(
+            player.client?.openInterface(
                 permanent = definition.permanent,
                 interfaceComponent = parent,
-                id = definition.id
+                id = definition.id,
             )
         }
     }
 
     private fun sendClose(id: String) {
-        val parent = definitions.getOrNull(id)?.parent(resizable)
+        val parent = InterfaceDefinitions.getOrNull(id)?.parent(resizable)
         if (parent != null && parent != -1) {
-            client?.closeInterface(parent)
+            player.client?.closeInterface(parent)
         }
     }
 
     private fun notifyRefresh(id: String) {
-        events.emit(InterfaceRefreshed(id))
+        InterfaceApi.refresh(player, id)
     }
 
     fun sendAnimation(id: String, component: String, animation: Int): Boolean {
-        val comp = definitions.getComponent(id, component) ?: return false
-        client?.animateInterface(comp.id, animation)
+        val comp = InterfaceDefinitions.getComponent(id, component) ?: return false
+        player.client?.animateInterface(comp.id, animation)
         return true
     }
 
     fun sendAnimation(id: String, component: String, animation: String): Boolean {
-        val comp = definitions.getComponent(id, component) ?: return false
-        val definitions: AnimationDefinitions = get()
-        client?.animateInterface(comp.id, definitions.get(animation).id)
+        val comp = InterfaceDefinitions.getComponent(id, component) ?: return false
+        player.client?.animateInterface(comp.id, AnimationDefinitions.get(animation).id)
         return true
     }
 
     fun sendText(id: String, component: String, text: String): Boolean {
-        val comp = definitions.getComponent(id, component) ?: return false
-        client?.interfaceText(comp.id, Colours.replaceCustomTags(text))
+        val comp = InterfaceDefinitions.getComponent(id, component) ?: return false
+        player.client?.interfaceText(comp.id, Colours.replaceCustomTags(text))
         return true
     }
 
     fun sendVisibility(id: String, component: String, visible: Boolean): Boolean {
-        val comp = definitions.getComponent(id, component) ?: return false
-        println("$id $component")
-        client?.interfaceVisibility(comp.id, !visible)
+        val comp = InterfaceDefinitions.getComponent(id, component) ?: return false
+        player.client?.interfaceVisibility(comp.id, !visible)
+        return true
+    }
+
+    fun sendPosition(id: String, component: String, x: Int? = null, y: Int? = null): Boolean {
+        val comp = InterfaceDefinitions.getComponent(id, component) ?: return false
+        player.client?.interfacePosition(comp.id, x ?: comp.baseX, y ?: comp.baseY)
         return true
     }
 
     fun sendSprite(id: String, component: String, sprite: Int): Boolean {
-        val comp = definitions.getComponent(id, component) ?: return false
-        client?.interfaceSprite(comp.id, sprite)
+        val comp = InterfaceDefinitions.getComponent(id, component) ?: return false
+        player.client?.interfaceSprite(comp.id, sprite)
+        return true
+    }
+
+    fun sendModel(id: String, component: String, model: Int): Boolean {
+        val comp = InterfaceDefinitions.getComponent(id, component) ?: return false
+        player.client?.interfaceModel(comp.id, model)
         return true
     }
 
     fun sendColour(id: String, component: String, colour: Colour): Boolean {
-        val comp = definitions.getComponent(id, component) ?: return false
+        val comp = InterfaceDefinitions.getComponent(id, component) ?: return false
         val red = (colour and 0xff0000) shr 16
         val green = (colour and 0xff00) shr 8
         val blue = colour and 0xff
-        client?.colourInterface(comp.id, ((red / 255.0 * 31).toInt() shl 10) + ((green / 255.0 * 31).toInt() shl 5) + (blue / 255.0 * 31).toInt())
+        player.client?.colourInterface(comp.id, ((red / 255.0 * 31).toInt() shl 10) + ((green / 255.0 * 31).toInt() shl 5) + (blue / 255.0 * 31).toInt())
         return true
     }
 
-    fun sendItem(id: String, component: String, item: Item): Boolean {
-        return sendItem(id, component, item.def.id, item.amount)
-    }
+    fun sendItem(id: String, component: String, item: Item): Boolean = sendItem(id, component, item.def.id, item.amount)
 
     fun sendItem(id: String, component: String, item: Int, amount: Int = 1): Boolean {
-        val comp = definitions.getComponent(id, component) ?: return false
-        client?.interfaceItem(comp.id, item, amount)
+        val comp = InterfaceDefinitions.getComponent(id, component) ?: return false
+        player.client?.interfaceItem(comp.id, item, amount)
         return true
     }
 
@@ -246,8 +245,7 @@ class Interfaces(
  * @param close any interfaces open with the same type
  */
 fun Player.open(interfaceId: String, close: Boolean = true): Boolean {
-    val defs: InterfaceDefinitions = get()
-    val type = defs.getOrNull(interfaceId)?.type
+    val type = InterfaceDefinitions.getOrNull(interfaceId)?.type
     if (close && type != null) {
         interfaces.get(type)?.let {
             interfaces.close(it)
@@ -264,7 +262,7 @@ fun Character.hasMenuOpen(): Boolean {
     if (this !is Player) {
         return false
     }
-    return hasTypeOpen("main_screen") || hasTypeOpen("wide_screen") || hasTypeOpen("underlay")
+    return hasTypeOpen("main_screen") || hasTypeOpen("underlay")
 }
 
 fun Player.close(interfaceId: String?) = interfaces.close(interfaceId)
@@ -280,12 +278,13 @@ val Player.dialogue: String?
     get() = interfaces.get("dialogue_box") ?: interfaces.get("dialogue_box_small")
 
 val Player.menu: String?
-    get() = interfaces.get("main_screen") ?: interfaces.get("wide_screen") ?: interfaces.get("underlay")
+    get() = interfaces.get("main_screen") ?: interfaces.get("underlay")
 
 fun Player.closeDialogue(): Boolean {
-    if (dialogueSuspension != null) {
-        dialogueSuspension = null
+    if (suspension is Suspension.Continue || suspension is Suspension.IntEntry || suspension is Suspension.StringEntry || suspension is Suspension.NameEntry) {
+        suspension = null
     }
+    sendScript("close_entry")
     return closeType("dialogue_box") || closeType("dialogue_box_small")
 }
 
@@ -293,19 +292,16 @@ fun Player.closeMenu(): Boolean = close(menu)
 
 fun Player.closeInterfaces(): Boolean {
     var closed = closeDialogue()
-    if (closeMenu()) {
+    if (closeMenu() || close(interfaces.get("wide_screen"))) {
         closed = true
     }
     queue.clearWeak()
-    sendScript("close_entry")
     return closed
 }
 
 fun Player.playTrack(trackIndex: Int) {
-    val enums: EnumDefinitions = get()
-    playMusicTrack(enums.get("music_tracks").getInt(trackIndex))
-    val name = enums.get("music_track_names").getString(trackIndex)
+    playMusicTrack(EnumDefinitions.get("music_tracks").int(trackIndex))
+    val name = EnumDefinitions.get("music_track_names").string(trackIndex)
     interfaces.sendText("music_player", "currently_playing", name)
-    this["playing_song"] = true
     this["current_track"] = trackIndex
 }

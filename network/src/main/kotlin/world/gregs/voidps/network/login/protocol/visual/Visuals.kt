@@ -34,14 +34,14 @@ abstract class Visuals {
         moved = false
         tele = false
         flag = 0
-        animation.clear()
-        graphics.forEach { it.clear() }
-        exactMovement.clear()
-        colourOverlay.clear()
-        hits.clear()
-        face.clear()
-        watch.clear()
-        say.clear()
-        timeBar.clear()
+        animation.reset()
+        graphics.forEach { it.reset() }
+        exactMovement.reset()
+        colourOverlay.reset()
+        hits.reset()
+        face.reset()
+        watch.reset()
+        say.reset()
+        timeBar.reset()
     }
 }

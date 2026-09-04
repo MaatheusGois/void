@@ -7,6 +7,7 @@ import world.gregs.voidps.engine.client.ui.InterfaceOption
 import world.gregs.voidps.engine.data.definition.ItemDefinitions
 import world.gregs.voidps.engine.data.definition.NPCDefinitions
 import world.gregs.voidps.engine.data.definition.ObjectDefinitions
+import world.gregs.voidps.engine.entity.character.npc.NPCs
 import world.gregs.voidps.engine.entity.character.player.Player
 import world.gregs.voidps.engine.entity.character.player.chat.ChatType
 import world.gregs.voidps.network.client.instruction.ExamineItem
@@ -53,7 +54,8 @@ class Examines : Script {
         }
 
         instruction<ExamineNpc> { player ->
-            val definition = NPCDefinitions.get(npcId)
+            val npc = NPCs.indexed(npcIndex) ?: return@instruction
+            val definition = npc.def
             if (definition.contains("examine")) {
                 player.message(definition["examine"], ChatType.Game)
             }

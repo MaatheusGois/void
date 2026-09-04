@@ -16,7 +16,7 @@ fun Player.flagAppearance() {
     appearance.length = appearance.length()
 }
 
-fun Player.flagTemporaryMoveType() = visuals.flag(VisualMask.TEMPORARY_MOVEMENT_TYPE_MASK)
+fun Player.flagTemporaryMoveType() = visuals.flag(VisualMask.TEMPORARY_MOVE_TYPE_MASK)
 
 val Player.appearance: Appearance
     get() = visuals.appearance

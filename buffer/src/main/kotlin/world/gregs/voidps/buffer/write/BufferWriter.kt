@@ -119,6 +119,41 @@ class BufferWriter(
         buffer.put(data, offset, length)
     }
 
+    override fun writeBytes(value: ShortArray) {
+        buffer
+            .asShortBuffer()
+            .put(value)
+        position(position() + value.size * 2)
+    }
+
+    override fun writeBytes(value: IntArray) {
+        buffer
+            .asIntBuffer()
+            .put(value)
+        position(position() + value.size * 4)
+    }
+
+    override fun writeBytes(value: LongArray) {
+        buffer
+            .asLongBuffer()
+            .put(value)
+        position(position() + value.size * 8)
+    }
+
+    override fun writeBytes(value: FloatArray) {
+        buffer
+            .asFloatBuffer()
+            .put(value)
+        position(position() + value.size * 4)
+    }
+
+    override fun writeBytes(value: DoubleArray) {
+        buffer
+            .asDoubleBuffer()
+            .put(value)
+        position(position() + value.size * 8)
+    }
+
     override fun startBitAccess() {
         bitIndex = buffer.position() * 8
     }

@@ -6,41 +6,19 @@ import world.gregs.voidps.engine.client.update.view.Viewport
 import world.gregs.voidps.engine.entity.character.player.Player
 import world.gregs.voidps.engine.entity.character.player.Players
 import world.gregs.voidps.network.login.protocol.encode.updatePlayers
-import world.gregs.voidps.network.login.protocol.visual.VisualMask
+import world.gregs.voidps.network.login.protocol.visual.PlayerVisuals
+import world.gregs.voidps.network.login.protocol.visual.VisualEncoder
 import world.gregs.voidps.network.login.protocol.visual.VisualMask.APPEARANCE_MASK
-import world.gregs.voidps.network.login.protocol.visual.VisualMask.APPEARANCE_MASK_INV
-import world.gregs.voidps.network.login.protocol.visual.encode.SayEncoder
-import world.gregs.voidps.network.login.protocol.visual.encode.WatchEncoder
-import world.gregs.voidps.network.login.protocol.visual.encode.player.AppearanceEncoder
-import world.gregs.voidps.network.login.protocol.visual.encode.player.MovementTypeEncoder
-import world.gregs.voidps.network.login.protocol.visual.encode.player.PlayerAnimationEncoder
-import world.gregs.voidps.network.login.protocol.visual.encode.player.PlayerColourOverlayEncoder
-import world.gregs.voidps.network.login.protocol.visual.encode.player.PlayerExactMovementEncoder
-import world.gregs.voidps.network.login.protocol.visual.encode.player.PlayerFaceEncoder
-import world.gregs.voidps.network.login.protocol.visual.encode.player.PlayerHitsEncoder
-import world.gregs.voidps.network.login.protocol.visual.encode.player.PlayerPrimaryGraphicEncoder
-import world.gregs.voidps.network.login.protocol.visual.encode.player.PlayerSecondaryGraphicEncoder
-import world.gregs.voidps.network.login.protocol.visual.encode.player.PlayerTimeBarEncoder
-import world.gregs.voidps.network.login.protocol.visual.encode.player.TemporaryMoveTypeEncoder
 import world.gregs.voidps.type.Delta
 import kotlin.math.abs
 
-class PlayerUpdateTask {
-    private val watchEncoder = WatchEncoder(VisualMask.PLAYER_WATCH_MASK)
-    private val playerTimeBarEncoder = PlayerTimeBarEncoder()
-    private val sayEncoder = SayEncoder(VisualMask.PLAYER_SAY_MASK)
-    private val playerHitsEncoder = PlayerHitsEncoder()
-    private val playerFaceEncoder = PlayerFaceEncoder()
-    private val playerExactMovementEncoder = PlayerExactMovementEncoder()
-    private val playerSecondaryGraphicEncoder = PlayerSecondaryGraphicEncoder()
-    private val playerColourOverlayEncoder = PlayerColourOverlayEncoder()
-    private val movementTypeEncoder = MovementTypeEncoder()
-    private val playerPrimaryGraphicEncoder = PlayerPrimaryGraphicEncoder()
-    private val playerAnimationEncoder = PlayerAnimationEncoder()
-    private val appearanceEncoder = AppearanceEncoder()
-    private val temporaryMoveTypeEncoder = TemporaryMoveTypeEncoder()
+class PlayerUpdateTask(
+    private val players: Players,
+    private val encoders: List<VisualEncoder<PlayerVisuals>>
+) {
 
-    private val initialFlag = VisualMask.PLAYER_FACE_MASK + VisualMask.MOVEMENT_TYPE_MASK + VisualMask.PLAYER_ANIMATION_MASK + VisualMask.APPEARANCE_MASK + VisualMask.TEMPORARY_MOVEMENT_TYPE_MASK
+    private val initialEncoders = encoders.filter { it.initial }
+    private val initialFlag = initialEncoders.sumOf { it.mask }
 
     fun run(player: Player) {
         val viewport = player.viewport ?: return
@@ -54,9 +32,8 @@ class PlayerUpdateTask {
         processGlobals(player, writer, updates, players, viewport, true)
         processGlobals(player, writer, updates, players, viewport, false)
 
-        val client = player.client ?: return
-        client.updatePlayers(writer, updates)
-        client.flush()
+        player.client?.updatePlayers(writer, updates)
+        player.client?.flush()
         writer.position(0)
         updates.position(0)
     }
@@ -67,7 +44,7 @@ class PlayerUpdateTask {
         updates: Writer,
         set: PlayerTrackingSet,
         viewport: Viewport,
-        active: Boolean,
+        active: Boolean
     ) {
         var skip = -1
         var index: Int
@@ -81,7 +58,7 @@ class PlayerUpdateTask {
             if (viewport.isIdle(index) == active) {
                 continue
             }
-            player = Players.indexed(index)!!
+            player = players.indexed(index)!!
 
             flag = updateFlag(updates, player, set)
             updateType = localChange(updates, player, client, viewport, flag)
@@ -108,7 +85,7 @@ class PlayerUpdateTask {
             }
 
             encodeMovement(updateType, sync, viewport, player)
-            encodeVisuals(updates, flag, player, client, set)
+            encodeVisuals(updates, flag, player, client, set, encoders)
         }
 
         if (skip > -1) {
@@ -137,49 +114,16 @@ class PlayerUpdateTask {
         viewport.seen(player)
     }
 
-    private fun encodeVisuals(updates: Writer, flag: Int, player: Player, client: Player, set: PlayerTrackingSet) {
+    private fun encodeVisuals(updates: Writer, flag: Int, player: Player, client: Player, set: PlayerTrackingSet, encoders: List<VisualEncoder<PlayerVisuals>>) {
         if (flag == 0) {
             return
         }
         writeFlag(updates, flag)
-        if (flag and VisualMask.PLAYER_WATCH_MASK != 0) {
-            watchEncoder.encode(updates, player.visuals, client.index)
-        }
-        if (flag and VisualMask.PLAYER_TIME_BAR_MASK != 0) {
-            playerTimeBarEncoder.encode(updates, player.visuals, client.index)
-        }
-        if (flag and VisualMask.PLAYER_SAY_MASK != 0) {
-            sayEncoder.encode(updates, player.visuals, client.index)
-        }
-        if (flag and VisualMask.PLAYER_HITS_MASK != 0) {
-            playerHitsEncoder.encode(updates, player.visuals, client.index)
-        }
-        if (flag and VisualMask.PLAYER_FACE_MASK != 0) {
-            playerFaceEncoder.encode(updates, player.visuals, client.index)
-        }
-        if (flag and VisualMask.PLAYER_EXACT_MOVEMENT_MASK != 0) {
-            playerExactMovementEncoder.encode(updates, player.visuals, client.index)
-        }
-        if (flag and VisualMask.PLAYER_GRAPHIC_2_MASK != 0) {
-            playerSecondaryGraphicEncoder.encode(updates, player.visuals, client.index)
-        }
-        if (flag and VisualMask.PLAYER_COLOUR_OVERLAY_MASK != 0) {
-            playerColourOverlayEncoder.encode(updates, player.visuals, client.index)
-        }
-        if (flag and VisualMask.MOVEMENT_TYPE_MASK != 0) {
-            movementTypeEncoder.encode(updates, player.visuals, client.index)
-        }
-        if (flag and VisualMask.PLAYER_GRAPHIC_1_MASK != 0) {
-            playerPrimaryGraphicEncoder.encode(updates, player.visuals, client.index)
-        }
-        if (flag and VisualMask.PLAYER_ANIMATION_MASK != 0) {
-            playerAnimationEncoder.encode(updates, player.visuals, client.index)
-        }
-        if (flag and APPEARANCE_MASK != 0) {
-            appearanceEncoder.encode(updates, player.visuals, client.index)
-        }
-        if (flag and VisualMask.TEMPORARY_MOVEMENT_TYPE_MASK != 0) {
-            temporaryMoveTypeEncoder.encode(updates, player.visuals, client.index)
+        for (encoder in encoders) {
+            if (flag and encoder.mask == 0) {
+                continue
+            }
+            encoder.encode(updates, player.visuals, client.index)
         }
         if (flag and APPEARANCE_MASK != 0) {
             set.updateAppearance(player)
@@ -193,7 +137,7 @@ class PlayerUpdateTask {
     private fun updateFlag(updates: Writer, player: Player, set: PlayerTrackingSet): Int {
         val visuals = player.visuals
         if (updates.position() + visuals.appearance.length >= MAX_UPDATE_SIZE) {
-            return visuals.flag and APPEARANCE_MASK_INV
+            return visuals.flag and APPEARANCE_MASK.inv()
         }
         if (set.needsAppearanceUpdate(player)) {
             return visuals.flag or APPEARANCE_MASK
@@ -236,7 +180,7 @@ class PlayerUpdateTask {
         updates: Writer,
         set: PlayerTrackingSet,
         viewport: Viewport,
-        active: Boolean,
+        active: Boolean
     ) {
         var skip = -1
         var index: Int
@@ -249,7 +193,7 @@ class PlayerUpdateTask {
                 continue
             }
 
-            player = Players.indexed(index)
+            player = players.indexed(index)
             viewport.setIdle(index)
             if (player == null) {
                 skip++
@@ -276,7 +220,7 @@ class PlayerUpdateTask {
             sync.writeBits(6, player.tile.y and 0x3f)
             sync.writeBits(1, appearance)
             if (appearance) {
-                encodeVisuals(updates, initialFlag, player, client, set)
+                encodeVisuals(updates, initialFlag, player, client, set, initialEncoders)
             }
         }
         if (skip > -1) {
@@ -289,10 +233,11 @@ class PlayerUpdateTask {
      * Check if a local [player] should be added to the local players list
      * @return true when within [Viewport.radius] and packet has enough room
      */
-    private fun add(player: Player, client: Player, viewport: Viewport, updates: Writer, sync: Writer): Boolean = player.client?.disconnected != true &&
-            player.tile.within(client.tile, viewport.radius) &&
-            updates.position() < MAX_UPDATE_SIZE &&
-            sync.position() < MAX_SYNC_SIZE
+    private fun add(player: Player, client: Player, viewport: Viewport, updates: Writer, sync: Writer): Boolean {
+        return player.client?.disconnected != true && player.tile.within(client.tile, viewport.radius) &&
+                updates.position() < MAX_UPDATE_SIZE &&
+                sync.position() < MAX_SYNC_SIZE
+    }
 
     fun writeSkip(sync: Writer, skip: Int) {
         sync.writeBits(1, 0)

@@ -68,7 +68,7 @@ data class BotInterfaceOption(val option: String, val id: String, val success: C
                 interfaceId = def.id,
                 componentId = componentId,
                 itemId = itemId,
-                itemSlot = itemSlot,
+                slotId = itemSlot,
                 option = index,
             ),
         )

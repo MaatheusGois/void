@@ -6,6 +6,7 @@ import world.gregs.voidps.network.login.Protocol.PRIVATE_STATUS
 import world.gregs.voidps.network.login.Protocol.PUBLIC_STATUS
 import world.gregs.voidps.network.login.protocol.p1Alt1
 import world.gregs.voidps.network.login.protocol.p1Alt3
+import world.gregs.voidps.network.login.protocol.writeByte
 
 /**
  * @param public (0 = on, 1 = friends, 2 = off, 3 = hide)

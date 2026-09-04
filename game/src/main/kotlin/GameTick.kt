@@ -22,6 +22,7 @@ import world.gregs.voidps.engine.entity.character.npc.NPC
 import world.gregs.voidps.engine.entity.character.npc.NPCs
 import world.gregs.voidps.engine.entity.character.npc.hunt.Hunting
 import world.gregs.voidps.engine.entity.character.player.Player
+import world.gregs.voidps.engine.entity.character.player.Players
 import world.gregs.voidps.engine.entity.item.floor.FloorItemTracking
 import world.gregs.voidps.engine.entity.item.floor.FloorItems
 import world.gregs.voidps.engine.entity.obj.GameObjects
@@ -31,6 +32,7 @@ import world.gregs.voidps.engine.map.zone.DynamicZones
 import world.gregs.voidps.engine.timer.toTicks
 import world.gregs.voidps.network.client.ConnectionQueue
 import world.gregs.voidps.network.login.protocol.npcVisualEncoders
+import world.gregs.voidps.network.login.protocol.playerVisualEncoders
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -70,8 +72,8 @@ fun getTickStages(
         ZoneBatchUpdates,
         CharacterUpdateTask(
             iterator,
-            PlayerUpdateTask(),
-            NPCUpdateTask(npcVisualEncoders()),
+            PlayerUpdateTask(Players, playerVisualEncoders()),
+            NPCUpdateTask(NPCs, npcVisualEncoders()),
         ),
         accountSave,
         SaveLogs(),

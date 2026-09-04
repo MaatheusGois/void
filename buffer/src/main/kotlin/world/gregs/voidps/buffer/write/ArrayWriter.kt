@@ -21,6 +21,97 @@ class ArrayWriter(
         buffer[index] = value.toByte()
     }
 
+    override fun writeByteAdd(value: Int) {
+        writeByte(value + 128)
+    }
+
+    override fun p1Alt2(value: Int) {
+        writeByte(-value)
+    }
+
+    override fun p1Alt3(value: Int) {
+        writeByte(-value + 128)
+    }
+
+    override fun writeShort(value: Int) {
+        writeByte(value shr 8)
+        writeByte(value)
+    }
+
+    override fun p2Alt2(value: Int) {
+        writeByte(value shr 8)
+        writeByteAdd(value)
+    }
+
+    override fun ip2(value: Int) {
+        writeByte(value)
+        writeByte(value shr 8)
+    }
+
+    override fun p2Alt3(value: Int) {
+        writeByteAdd(value)
+        writeByte(value shr 8)
+    }
+
+    override fun writeMedium(value: Int) {
+        writeByte(value shr 16)
+        writeByte(value shr 8)
+        writeByte(value)
+    }
+
+    override fun writeInt(value: Int) {
+        writeByte(value shr 24)
+        writeByte(value shr 16)
+        writeByte(value shr 8)
+        writeByte(value)
+    }
+
+    override fun writeIntMiddle(value: Int) {
+        writeByte(value shr 8)
+        writeByte(value)
+        writeByte(value shr 24)
+        writeByte(value shr 16)
+    }
+
+    override fun writeIntInverse(value: Int) {
+        writeByte(value shr 8)
+        writeByte(value shr 24)
+        writeByte(value shr 16)
+        p1Alt2(value)
+    }
+
+    override fun writeIntInverseMiddle(value: Int) {
+        writeByte(value shr 16)
+        writeByte(value shr 24)
+        writeByte(value)
+        writeByte(value shr 8)
+    }
+
+    override fun writeIntLittle(value: Int) {
+        writeByte(value)
+        writeByte(value shr 8)
+        writeByte(value shr 16)
+        writeByte(value shr 24)
+    }
+
+    override fun writeIntInverseLittle(value: Int) {
+        p1Alt2(value)
+        writeByte(value shr 8)
+        writeByte(value shr 16)
+        writeByte(value shr 24)
+    }
+
+    override fun writeLong(value: Long) {
+        writeByte((value shr 56).toInt())
+        writeByte((value shr 48).toInt())
+        writeByte((value shr 40).toInt())
+        writeByte((value shr 32).toInt())
+        writeByte((value shr 24).toInt())
+        writeByte((value shr 16).toInt())
+        writeByte((value shr 8).toInt())
+        writeByte(value.toInt())
+    }
+
     override fun writeBytes(value: ByteArray) {
         System.arraycopy(value, 0, buffer, position, value.size)
         position += value.size

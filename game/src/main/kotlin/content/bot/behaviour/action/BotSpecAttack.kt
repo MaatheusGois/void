@@ -71,7 +71,7 @@ data class BotSpecAttack(
                 interfaceId = interfaceDef.id,
                 componentId = componentId,
                 itemId = invItemId,
-                itemSlot = invSlot,
+                slotId = invSlot,
                 option = optionIndex,
             ),
         )

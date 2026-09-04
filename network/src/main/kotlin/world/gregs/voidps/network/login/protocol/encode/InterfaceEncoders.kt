@@ -194,6 +194,20 @@ fun Client.interfaceSprite(
     writeInt(interfaceComponent)
 }
 
+fun Client.interfaceModel(
+    interfaceComponent: Int,
+    model: Int,
+) = send(Protocol.INTERFACE_MODEL) {
+    p2Alt2(model)
+    p4Alt2(interfaceComponent)
+}
+
+fun Client.interfacePosition(interfaceComponent: Int, x: Int, y: Int) = send(Protocol.INTERFACE_COMPONENT_POSITION) {
+    writeShort(y)
+    writeInt(interfaceComponent)
+    p2Alt2(x)
+}
+
 /**
  * Update the text of an interface component
  * @param interfaceComponent Packed component index and id of the parent window
@@ -230,4 +244,24 @@ fun Client.interfaceVisibility(
         p4Alt2(interfaceComponent)
         p1Alt1(hide)
     }
+}
+
+/**
+ * Send an update to grand exchange slot (UPDATE_STOCKMARKET_SLOT).
+ */
+fun Client.grandExchange(slot: Int, state: Int = 0, item: Int = 0, price: Int = 0, amount: Int = 0, sold: Int = 0, coins: Int = 0) = send(Protocol.GRAND_EXCHANGE_SLOT) {
+    writeByte(slot)
+    writeByte(state)
+    writeShort(item)
+    writeInt(price)
+    writeInt(amount)
+    writeInt(sold)
+    writeInt(coins)
+}
+
+/**
+ * Send system update timer (UPDATE_REBOOT_TIMER).
+ */
+fun Client.systemUpdate(ticks: Int) = send(Protocol.SYSTEM_UPDATE) {
+    writeShort(ticks)
 }

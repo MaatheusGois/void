@@ -1,6 +1,6 @@
 package world.gregs.voidps.network.login.protocol.decode
 
-import io.ktor.utils.io.core.*
+import kotlinx.io.Source
 import world.gregs.voidps.cache.definition.data.InterfaceDefinition
 import world.gregs.voidps.network.client.Instruction
 import world.gregs.voidps.network.client.instruction.InteractInterfacePlayer
@@ -8,7 +8,7 @@ import world.gregs.voidps.network.login.protocol.*
 
 class InterfaceOnPlayerDecoder : Decoder(11) {
 
-    override suspend fun decode(packet: ByteReadPacket): Instruction {
+    override suspend fun decode(packet: Source): Instruction {
         val index = packet.g2Alt1()
         val packed = packet.g4Alt1()
         val itemId = packet.readShort().toInt()
