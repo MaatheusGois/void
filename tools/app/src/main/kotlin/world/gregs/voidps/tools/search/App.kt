@@ -22,6 +22,14 @@ import world.gregs.voidps.tools.search.screen.view.detail.ParamLookup
 import world.gregs.voidps.tools.search.screen.view.tab.DefinitionTab
 import world.gregs.voidps.tools.search.screen.view.tab.buildTabs
 
+fun main(args: Array<String>) {
+    if (args.isNotEmpty()) {
+        CacheCli.run(args)
+        return
+    }
+    main()
+}
+
 fun main() = application {
     Settings.load()
     Settings.rebase("../../")

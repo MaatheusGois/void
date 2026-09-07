@@ -7,6 +7,14 @@ Note: Takes a minute to load everything on startup.
 ### Run
 `gradle tools:app:run`
 
+
+### CLI para IA
+Para consultar definições do cache sem abrir a interface gráfica, passe `--cli` ao app. A saída padrão é JSON, adequada para ferramentas de IA:
+
+`./gradlew tools:app:run --args="--cli --cache=/path/to/cache --type=npcs --query=kalphite"`
+
+Opções disponíveis: `--type`, `--query`, `--id`, `--fields`, `--limit` e `--format=json|text`. Execute com `--help` para ver exemplos e todos os tipos suportados.
+
 ### Build
 `gradle tools:app:packageReleaseUberJarForCurrentOS`
 
