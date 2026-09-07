@@ -489,3 +489,45 @@ delta = { level = 1 }
 option = "Climb-down"
 tile = { x = 3267, y = 3400 }
 to = { x = 2894, y = 5097 }
+
+# Digsite Dungeon north-east winch
+[digsite_winch_north_east]
+option = "Operate"
+tile = { x = 3375, y = 3431 }
+to = { x = 3368, y = 9762, level = 0 }
+
+# Digsite Dungeon rope exits
+[digsite_rope_west]
+option = "Climb-up"
+tile = { x = 3359, y = 9759, level = 0 }
+to = { x = 3359, y = 3423, level = 0 }
+
+[digsite_rope_north_east]
+option = "Climb-up"
+tile = { x = 3375, y = 9767, level = 0 }
+to = { x = 3375, y = 3431, level = 0 }
+
+[digsite_rope_west]
+option = "Climb-up"
+tile = { x = 3359, y = 9823, level = 0 }
+to = { x = 3359, y = 3423, level = 0 }
+
+[digsite_rope_north_east]
+option = "Climb-up"
+tile = { x = 3375, y = 9831, level = 0 }
+to = { x = 3375, y = 3431, level = 0 }
+
+[digsite_rope_west]
+option = "Climb-up"
+tile = { x = 3487, y = 10079, level = 0 }
+to = { x = 3359, y = 3423, level = 0 }
+
+[digsite_rope_north_east]
+option = "Climb-up"
+tile = { x = 3503, y = 10087, level = 0 }
+to = { x = 3375, y = 3431, level = 0 }
+
+[digsite_rope_temple]
+option = "Climb-up"
+tile = { x = 3177, y = 5730, level = 0 }
+to = { x = 3177, y = 5731, level = 0 }

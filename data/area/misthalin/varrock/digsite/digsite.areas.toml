@@ -2,3 +2,23 @@
 x = [3338, 3342]
 y = [3444, 3447]
 tags = ["teleport"]
+
+[digsite_dungeon_north]
+x = [3344, 3391]
+y = [9728, 9855]
+tags = ["multi_combat", "no_random_events"]
+
+[digsite_dungeon_south]
+x = [3456, 3519]
+y = [10048, 10111]
+tags = ["multi_combat", "no_random_events"]
+
+[senntisten_temple]
+x = [3136, 3199]
+y = [5696, 5759]
+tags = ["multi_combat", "no_random_events"]
+
+[senntisten_temple_digsite]
+x = [3264, 3327]
+y = [5696, 5759]
+tags = ["multi_combat", "no_random_events"]

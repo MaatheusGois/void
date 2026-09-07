@@ -59,7 +59,7 @@ object ObjectDefinitions : DefinitionsDecoder<ObjectDefinition> {
                                 "clone" -> {
                                     val name = string()
                                     val obj = refs.getInt(name)
-                                    require(obj >= 0) { "Cannot find object to clone with id '$name' in ${path}. Make sure it's in the same file." }
+                                    require(obj >= 0) { "Cannot find object to clone with id '$name'. Make sure it's in the same file." }
                                     val definition = definitions[obj]
                                     params.putAll(definition.params ?: continue)
                                 }
@@ -69,6 +69,24 @@ object ObjectDefinitions : DefinitionsDecoder<ObjectDefinition> {
                                         categories.add(string())
                                     }
                                     params[Params.CATEGORIES] = categories
+                                }
+                                "options" -> {
+                                    val options = Object2IntOpenHashMap<String>(4, Hash.VERY_FAST_LOAD_FACTOR)
+                                    var max = 0
+                                    while (nextEntry()) {
+                                        val option = key()
+                                        val index = int()
+                                        require(index >= 0) { "Object option index must not be negative: $option" }
+                                        if (index > max) {
+                                            max = index
+                                        }
+                                        options[option] = index
+                                    }
+                                    val optionsArray = arrayOfNulls<String>(max + 1)
+                                    for ((option, index) in options) {
+                                        optionsArray[index] = option
+                                    }
+                                    definitions[id].options = optionsArray
                                 }
                                 else -> params[Params.id(key)] = value()
                             }

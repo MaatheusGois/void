@@ -1,0 +1,22 @@
+[digsite_winch_west]
+id = 2350
+examine = "A winch used to access the excavation shaft."
+
+[digsite_winch_north_east]
+id = 2351
+examine = "A winch used to access the excavation shaft."
+
+[digsite_rope_west]
+id = 2352
+examine = "A rope leading up to the surface."
+options = { "Climb-up" = 0, Examine = 4 }
+
+[digsite_rope_north_east]
+id = 2353
+examine = "A rope leading up to the surface."
+options = { "Climb-up" = 0, Examine = 4 }
+
+[digsite_rope_temple]
+id = 2352
+examine = "A rope leading up to the surface."
+options = { "Climb-up" = 0, Examine = 4 }

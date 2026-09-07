@@ -329,3 +329,8 @@ examine = "Shrine to the glory of Zaros."
 [prayer_altar_warped_construction]
 id = 55667
 examine = "A shrine for the faithful to worship at."
+
+[altar_of_zaros]
+id = 47120
+examine = "An ancient altar to the glory of Zaros."
+options = { Pray = 0, "Switch-prayer-book" = 1, Examine = 4 }
